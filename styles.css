@@ -316,6 +316,88 @@ html[data-theme="dark"] .theme-icon-dark {
   font-weight: 600;
 }
 
+.panier-total {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.panier-total span {
+  font-size: 13px;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.panier-total span:not([class*="is-"]) {
+  color: var(--text-2);
+}
+
+/* "Grade needed" hint: one module left in a panier or in the year. */
+.need {
+  margin: 0;
+  padding: 10px 18px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-2);
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+}
+
+.need strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.need strong.is-good { color: var(--good); }
+.need strong.is-low { color: var(--low); }
+
+.need[hidden] {
+  display: none;
+}
+
+.summary-card .need {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+}
+
+.need-line {
+  display: block;
+  margin-top: 4px;
+}
+
+.summary-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.summary-total-label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.summary-total-label small {
+  color: var(--text-3);
+  font-size: 11px;
+}
+
+.summary-total-value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .module-list {
   padding: 8px 0 12px;
 }
@@ -529,8 +611,8 @@ input[type="number"] {
 
 .panier-list li {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 48px;
-  gap: 8px;
+  grid-template-columns: 30px minmax(0, 1fr) 44px 44px;
+  gap: 6px;
   align-items: baseline;
   padding: 8px 14px;
   font-size: 13px;
@@ -552,6 +634,18 @@ input[type="number"] {
 .panier-list .avg {
   text-align: right;
   font-weight: 500;
+}
+
+.panier-list .panier-list-head {
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  text-align: right;
 }
 
 .btn {

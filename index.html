@@ -57,6 +57,11 @@
         <div class="summary-bar" aria-hidden="true">
           <span id="overall-bar"></span>
         </div>
+        <div class="summary-total">
+          <span class="summary-total-label">Moyenne totale <small>(vides = 0)</small></span>
+          <span class="summary-total-value" id="overall-total">—</span>
+        </div>
+        <p class="need" id="overall-need" hidden></p>
       </div>
 
       <ul class="panier-list" id="panier-summary"></ul>
@@ -68,7 +73,8 @@
   </div>
 
   <footer class="site-footer">
-    <p>Calcul : Σ (note × coef) / Σ coef, modules renseignés uniquement.</p>
+    <p>Moyenne : Σ (note × coef) / Σ coef, modules renseignés uniquement.
+       Moyenne totale : Σ (note × coef) / coef total, modules vides comptés 0.</p>
   </footer>
 
   <script src="app.js"></script>

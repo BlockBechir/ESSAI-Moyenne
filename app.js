@@ -225,6 +225,20 @@ function panierMaxCoef(panier) {
   return coefs.sort((a, b) => b - a).slice(0, panier.pick).reduce((s, c) => s + c, 0);
 }
 
+/* Grade needed in a module of coefficient `coef` so that
+   (points + note × coef) / totalCoef reaches `target`. Rounded up to the
+   hundredth so that the shown grade is always enough. */
+function neededNote(points, totalCoef, coef, target = 10) {
+  const raw = (target * totalCoef - points) / coef;
+  return Math.ceil(raw * 100 - 1e-9) / 100;
+}
+
+function describeNeed(note) {
+  if (note <= 0) return `<strong class="is-good">déjà atteint</strong>, quelle que soit la note`;
+  if (note > 20) return `<strong class="is-low">impossible</strong> (il faudrait ${formatNote(note)}/20)`;
+  return `<strong>${formatNote(note)}/20</strong> minimum`;
+}
+
 function toneForAverage(average) {
   if (average == null) return "";
   if (average >= 12) return "is-good";
@@ -343,9 +357,11 @@ function renderPaniers() {
           <div class="panier-head-meta">
             <p class="panier-coef">Coef. ${formatCoef(panierMaxCoef(panier))}</p>
             <p class="panier-avg" data-panier-avg="${panier.id}">—</p>
+            <p class="panier-total">Totale <span data-panier-total="${panier.id}">—</span></p>
           </div>
         </header>
         ${pickNote}
+        <p class="need" data-panier-need="${panier.id}" hidden></p>
         <div class="module-list">${rows}</div>
       </section>
     `;
@@ -354,11 +370,16 @@ function renderPaniers() {
 
 function renderPanierSummary() {
   const list = document.getElementById("panier-summary");
-  list.innerHTML = YEARS[currentYear].paniers.map((panier) => `
+  list.innerHTML = `
+    <li class="panier-list-head" aria-hidden="true">
+      <span></span><span></span><span>Moy.</span><span>Totale</span>
+    </li>
+  ` + YEARS[currentYear].paniers.map((panier) => `
     <li>
       <span class="code">${panier.code}</span>
       <span class="name">${panier.title}</span>
       <span class="avg" data-summary-avg="${panier.id}">—</span>
+      <span class="avg" data-summary-total="${panier.id}">—</span>
     </li>
   `).join("");
 }
@@ -417,13 +438,18 @@ function update() {
 
   const overallEntries = [];
   let totalCoef = 0;
+  // Empty slots across the year; an unfilled optional pick counts as one.
+  let emptySlots = 0;
+  let lastEmpty = null; // { module, panier, panierPoints, panierCoef }
 
   for (const panier of year.paniers) {
     let modules = panier.modules;
+    let missingPicks = 0;
     if (panier.pick) {
       refreshPickState(panier);
       const picks = picksFor(panier.id);
       modules = modules.filter((m) => picks.includes(m.id));
+      missingPicks = Math.max(0, panier.pick - picks.length);
     }
 
     const entries = modules.map((module) => ({
@@ -432,18 +458,64 @@ function update() {
     }));
     const result = weightedAverage(entries);
     overallEntries.push(...entries);
-    totalCoef += panierMaxCoef(panier);
+    const panierCoef = panierMaxCoef(panier);
+    totalCoef += panierCoef;
+
+    // Total average: empty modules count as 0.
+    const total = result.coef > 0 ? result.points / panierCoef : null;
+    const empties = modules.filter((m) => notesById[m.id] == null);
+    emptySlots += empties.length + missingPicks;
+    if (empties.length === 1) {
+      lastEmpty = { module: empties[0], panier, panierPoints: result.points, panierCoef };
+    }
 
     const avgLabel = result.average == null ? "—" : formatNote(result.average);
+    const totalLabel = total == null ? "—" : formatNote(total);
     const head = document.querySelector(`[data-panier-avg="${panier.id}"]`);
     const summary = document.querySelector(`[data-summary-avg="${panier.id}"]`);
+    const headTotal = document.querySelector(`[data-panier-total="${panier.id}"]`);
+    const summaryTotal = document.querySelector(`[data-summary-total="${panier.id}"]`);
     head.textContent = avgLabel;
     summary.textContent = avgLabel;
+    headTotal.textContent = totalLabel;
+    summaryTotal.textContent = totalLabel;
     head.className = `panier-avg ${toneForAverage(result.average)}`;
     summary.className = `avg ${toneForAverage(result.average)}`;
+    headTotal.className = toneForAverage(total);
+    summaryTotal.className = `avg ${toneForAverage(total)}`;
+
+    // One module left in this panier (and every optional pick made).
+    const needEl = document.querySelector(`[data-panier-need="${panier.id}"]`);
+    if (empties.length === 1 && missingPicks === 0) {
+      const note = neededNote(result.points, panierCoef, empties[0].coef);
+      needEl.innerHTML = `Il reste <strong>${empties[0].name}</strong> : ${describeNeed(note)}
+        pour une moyenne totale de 10 dans ${panier.code}.`;
+      needEl.hidden = false;
+    } else {
+      needEl.hidden = true;
+    }
   }
 
   const overall = weightedAverage(overallEntries);
+  const overallTotalEl = document.getElementById("overall-total");
+  const overallTotal = overall.coef > 0 ? overall.points / totalCoef : null;
+  overallTotalEl.textContent = overallTotal == null ? "—" : formatNote(overallTotal);
+  overallTotalEl.className = `summary-total-value ${toneForAverage(overallTotal)}`;
+
+  // One module left in the whole year.
+  const overallNeedEl = document.getElementById("overall-need");
+  if (emptySlots === 1 && lastEmpty) {
+    const { module, panier, panierPoints, panierCoef } = lastEmpty;
+    const forPanier = neededNote(panierPoints, panierCoef, module.coef);
+    const forYear = neededNote(overall.points, totalCoef, module.coef);
+    overallNeedEl.innerHTML = `
+      Dernier module : <strong>${module.name}</strong> (${panier.code}, coef ${formatCoef(module.coef)})
+      <span class="need-line">${panier.code} ≥ 10 : ${describeNeed(forPanier)}</span>
+      <span class="need-line">Moyenne totale ≥ 10 : ${describeNeed(forYear)}</span>`;
+    overallNeedEl.hidden = false;
+  } else {
+    overallNeedEl.hidden = true;
+  }
   const overallEl = document.getElementById("overall-average");
   const metaEl = document.getElementById("overall-meta");
   const barEl = document.getElementById("overall-bar");
